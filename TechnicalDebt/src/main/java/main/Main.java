@@ -1,7 +1,6 @@
 package main;
 
-import java.io.File;
-import java.io.FileReader;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -120,58 +119,72 @@ public class Main {
 				Instances trainSet = new Instances( new FileReader(trainingDataPath));
 				trainSet.setClassIndex(1);
 				Instances testSet = new Instances( new FileReader(testingDataPath));
+				testSet.setClassIndex(1);
 
-				// Download e.g the SLIM Google News model from
+
+				RnnSequenceClassifier classifier;
+				File classifierFile = new File(rscdir+"classifier\\"+projects.get(source)+".rnn");
+//				if( classifierFile.exists() ) {
+//					FileInputStream fis = new FileInputStream(rscdir+"classifier\\"+projects.get(source)+".rnn");
+//					ObjectInputStream ois = new ObjectInputStream( fis );
+//					classifier = (RnnSequenceClassifier)ois.readObject();
+//				}
+//				else {
+					// Download e.g the SLIM Google News model from
 // https://github.com/eyaler/word2vec-slim/raw/master/GoogleNews-vectors-negative300-SLIM.bin.gz
-				final File modelSlim = new File(rscdir + "GoogleNews-vectors-negative300-SLIM.bin");
+					final File modelSlim = new File(rscdir + "GoogleNews-vectors-negative300-SLIM.bin");
 
 // Setup hyperparameters
-				final int truncateLength = 80;
-				final int batchSize = 64;
-				final int seed = 1;
-				final int numEpochs = 10;
-				final int tbpttLength = 20;
-				final double l2 = 1e-5;
-				final double gradientThreshold = 1.0;
-				final double learningRate = 0.02;
+					final int truncateLength = 80;
+					final int batchSize = 64;
+					final int seed = 1;
+					final int numEpochs = 10;
+					final int tbpttLength = 20;
+					final double l2 = 1e-5;
+					final double gradientThreshold = 1.0;
+					final double learningRate = 0.02;
 
 // Setup the iterator
-				RnnTextEmbeddingInstanceIterator tii = new RnnTextEmbeddingInstanceIterator();
-				tii.setWordVectorLocation(modelSlim);
-				tii.setTruncateLength(truncateLength);
-				tii.setTrainBatchSize(batchSize);
+					RnnTextEmbeddingInstanceIterator tii = new RnnTextEmbeddingInstanceIterator();
+					tii.setWordVectorLocation(modelSlim);
+					tii.setTruncateLength(truncateLength);
+					tii.setTrainBatchSize(batchSize);
 
 // Initialize the classifier
-				RnnSequenceClassifier classifier = new RnnSequenceClassifier();
-				classifier.setSeed(seed);
-				classifier.setNumEpochs(numEpochs);
-				classifier.setInstanceIterator(tii);
-				classifier.settBPTTbackwardLength(tbpttLength);
-				classifier.settBPTTforwardLength(tbpttLength);
+					classifier = new RnnSequenceClassifier();
+					classifier.setSeed(seed);
+					classifier.setNumEpochs(numEpochs);
+					classifier.setInstanceIterator(tii);
+					classifier.settBPTTbackwardLength(tbpttLength);
+					classifier.settBPTTforwardLength(tbpttLength);
 
 // Define the layers
-				LSTM lstm = new LSTM();
-				lstm.setNOut(64);
-				lstm.setActivationFunction(new ActivationTanH());
+					LSTM lstm = new LSTM();
+					lstm.setNOut(64);
+					lstm.setActivationFunction(new ActivationTanH());
 
-				RnnOutputLayer rnnOut = new RnnOutputLayer();
+					RnnOutputLayer rnnOut = new RnnOutputLayer();
 
 // Network config
-				NeuralNetConfiguration nnc = new NeuralNetConfiguration();
-				Adam adam = new Adam();
-				adam.setLearningRate(learningRate);
-				nnc.setUpdater( adam );
-				nnc.setL2(l2);
-				nnc.setGradientNormalization(GradientNormalization.ClipElementWiseAbsoluteValue);
-				nnc.setGradientNormalizationThreshold(gradientThreshold);
+					NeuralNetConfiguration nnc = new NeuralNetConfiguration();
+					Adam adam = new Adam();
+					adam.setLearningRate(learningRate);
+					nnc.setUpdater(adam);
+					nnc.setL2(l2);
+					nnc.setGradientNormalization(GradientNormalization.ClipElementWiseAbsoluteValue);
+					nnc.setGradientNormalizationThreshold(gradientThreshold);
 
 // Config classifier
-				classifier.setLayers(lstm, rnnOut);
-				classifier.setNeuralNetConfiguration(nnc);
+					classifier.setLayers(lstm, rnnOut);
+					classifier.setNeuralNetConfiguration(nnc);
 
-				classifier.buildClassifier(trainSet);
+					classifier.buildClassifier(trainSet);
 
-				SerializationHelper.write(rscdir+"classifier\\"+projects.get(source)+".rnn", classifier);
+
+//					FileOutputStream fos = new FileOutputStream(rscdir + "classifier\\" + projects.get(source) + ".rnn");
+//					ObjectOutputStream oos = new ObjectOutputStream( fos );
+//					oos.writeObject(classifier);
+//				}
 
 				for (int i = 0; i < testSet.numInstances(); i++) {
 					Instance instance = testSet.instance(i);
